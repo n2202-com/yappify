@@ -3679,13 +3679,25 @@ async def on_reaction_remove(reaction, user):
 # TYPING INDICATOR
 # =========================
 
+typing_cooldown = {}
+
 @bot.event
 async def on_typing(channel, user, when):
+    if user.bot:
+        return
+
     cid = channel.id
 
-    # only work inside active calls
     if cid not in active_calls:
         return
+
+    now = time.time()
+
+    # throttle per channel (1.5s cooldown)
+    if now - typing_cooldown.get(cid, 0) < 1.5:
+        return
+
+    typing_cooldown[cid] = now
 
     partner_id = active_calls.get(cid)
     partner_channel = bot.get_channel(partner_id)
@@ -3693,18 +3705,10 @@ async def on_typing(channel, user, when):
     if not partner_channel:
         return
 
-    # update last typing time
-    typing_tracker[cid] = time.time()
-
-    partner_id = active_calls.get(cid)
-    if partner_id:
-        typing_tracker[partner_id] = time.time()
-
     try:
         await partner_channel.trigger_typing()
     except:
         pass
-
 # =========================
 # USER HELPER
 # =========================
