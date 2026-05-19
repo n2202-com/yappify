@@ -3159,7 +3159,7 @@ async def start_call(channel, user, status_message=None):
 
         #store "searching message" if provided
         if status_message:
-            await status_message.edit("📞 Searching for a server...")
+            await status_message.edit(content="📞 Searching for a server...")
 
             search_messages[cid] = status_message
 
