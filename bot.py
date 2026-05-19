@@ -28,7 +28,6 @@ DATA_FOLDER = "data"
 # =========================
 
 MESSAGE_LINK_TTL = 60 * 60      # 1 hour
-TYPING_TTL = 30                # 30 seconds
 ACTIVITY_TTL = 10 * 60         # 10 minutes
 
 BANNED_USERS_FILE = os.path.join(DATA_FOLDER, "banned_users.json")
@@ -79,7 +78,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.reactions = True
-intents.typing = True 
 
 bot = commands.Bot(command_prefix=["y.", "Y."], intents=intents)
 
@@ -89,7 +87,6 @@ bot = commands.Bot(command_prefix=["y.", "Y."], intents=intents)
 
 waiting_channels = []
 active_calls = {}
-typing_tracker = {}  # channel_id -> last typing timestamp
 last_call_log = {}
 report_messages = {}
 webhook_cache = {}
@@ -253,13 +250,6 @@ def cleanup_expired_memory():
         data = message_links.get(msg_id, {})
         if now - data.get("timestamp", now) > MESSAGE_LINK_TTL:
             message_links.pop(msg_id, None)
-
-    # -------------------------
-    # TYPING CLEANUP
-    # -------------------------
-    for cid in list(typing_tracker.keys()):
-        if now - typing_tracker[cid] > TYPING_TTL:
-            typing_tracker.pop(cid, None)
 
     # -------------------------
     # ACTIVITY CLEANUP
@@ -720,9 +710,6 @@ async def start_call(channel, user, status_message=None):
     active_calls[cid] = partner
     active_calls[partner] = cid
 
-    bot.loop.create_task(typing_loop(channel.id, partner_id))
-    bot.loop.create_task(typing_loop(partner_id, channel.id))
-
     try:
         # 🔥 EDIT original "Searching..." message
         if status_message:
@@ -864,28 +851,6 @@ async def inactivity_checker():
                 last_activity.pop(partner, None)
 
 # =========================
-# TYPING LOOP
-# =========================
-
-@tasks.loop(seconds=2)
-async def typing_sync_loop():
-    now = time.time()
-
-    for cid, partner_id in list(active_calls.items()):
-
-        partner_channel = bot.get_channel(partner_id)
-        if not partner_channel:
-            continue
-
-        last = typing_tracker.get(cid, 0)
-
-        if now - last <= 4:
-            try:
-                await partner_channel.trigger_typing()
-            except:
-                pass
-
-# =========================
 # BAN CLEANUP LOOP
 # =========================
 @tasks.loop(hours=24)
@@ -913,7 +878,6 @@ async def on_ready():
     # =========================
     active_calls.clear()
     waiting_channels.clear()
-    typing_tracker.clear()
     last_activity.clear()
     search_messages.clear()
 
@@ -931,9 +895,6 @@ async def on_ready():
     # start loops safely
     if not inactivity_checker.is_running():
         inactivity_checker.start()
-
-    if not typing_sync_loop.is_running():
-        typing_sync_loop.start()
 
     if not ban_cleanup_loop.is_running():
         ban_cleanup_loop.start()
@@ -1215,25 +1176,6 @@ async def on_reaction_remove(reaction, user):
     except Exception as e:
         print(f"[REACTION REMOVE ERROR]: {e}")
 
-# =========================
-# TYPING INDICATOR
-# =========================
-
-async def typing_loop(channel_id, partner_id):
-    while True:
-        if channel_id not in active_calls:
-            return
-
-        partner_channel = bot.get_channel(partner_id)
-        if not partner_channel:
-            return
-
-        try:
-            await partner_channel.trigger_typing()
-        except:
-            pass
-
-        await asyncio.sleep(5)  # keep alive interval
 # =========================
 # USER HELPER
 # =========================
@@ -2492,7 +2434,6 @@ DATA_FOLDER = "data"
 # =========================
 
 MESSAGE_LINK_TTL = 60 * 60      # 1 hour
-TYPING_TTL = 30                # 30 seconds
 ACTIVITY_TTL = 10 * 60         # 10 minutes
 
 BANNED_USERS_FILE = os.path.join(DATA_FOLDER, "banned_users.json")
@@ -2552,7 +2493,6 @@ bot = commands.Bot(command_prefix=["y.", "Y."], intents=intents)
 
 waiting_channels = []
 active_calls = {}
-typing_tracker = {}  # channel_id -> last typing timestamp
 last_call_log = {}
 report_messages = {}
 webhook_cache = {}
@@ -2716,13 +2656,6 @@ def cleanup_expired_memory():
         data = message_links.get(msg_id, {})
         if now - data.get("timestamp", now) > MESSAGE_LINK_TTL:
             message_links.pop(msg_id, None)
-
-    # -------------------------
-    # TYPING CLEANUP
-    # -------------------------
-    for cid in list(typing_tracker.keys()):
-        if now - typing_tracker[cid] > TYPING_TTL:
-            typing_tracker.pop(cid, None)
 
     # -------------------------
     # ACTIVITY CLEANUP
@@ -3324,28 +3257,6 @@ async def inactivity_checker():
                 last_activity.pop(partner, None)
 
 # =========================
-# TYPING LOOP
-# =========================
-
-@tasks.loop(seconds=2)
-async def typing_sync_loop():
-    now = time.time()
-
-    for cid, partner_id in list(active_calls.items()):
-
-        partner_channel = bot.get_channel(partner_id)
-        if not partner_channel:
-            continue
-
-        last = typing_tracker.get(cid, 0)
-
-        if now - last <= 4:
-            try:
-                await partner_channel.trigger_typing()
-            except:
-                pass
-
-# =========================
 # BAN CLEANUP LOOP
 # =========================
 @tasks.loop(hours=24)
@@ -3373,7 +3284,6 @@ async def on_ready():
     # =========================
     active_calls.clear()
     waiting_channels.clear()
-    typing_tracker.clear()
     last_activity.clear()
     search_messages.clear()
 
@@ -3391,9 +3301,6 @@ async def on_ready():
     # start loops safely
     if not inactivity_checker.is_running():
         inactivity_checker.start()
-
-    if not typing_sync_loop.is_running():
-        typing_sync_loop.start()
 
     if not ban_cleanup_loop.is_running():
         ban_cleanup_loop.start()
@@ -3675,40 +3582,6 @@ async def on_reaction_remove(reaction, user):
     except Exception as e:
         print(f"[REACTION REMOVE ERROR]: {e}")
 
-# =========================
-# TYPING INDICATOR
-# =========================
-
-typing_cooldown = {}
-
-@bot.event
-async def on_typing(channel, user, when):
-    if user.bot:
-        return
-
-    cid = channel.id
-
-    if cid not in active_calls:
-        return
-
-    now = time.time()
-
-    # throttle per channel (1.5s cooldown)
-    if now - typing_cooldown.get(cid, 0) < 1.5:
-        return
-
-    typing_cooldown[cid] = now
-
-    partner_id = active_calls.get(cid)
-    partner_channel = bot.get_channel(partner_id)
-
-    if not partner_channel:
-        return
-
-    try:
-        await partner_channel.trigger_typing()
-    except:
-        pass
 # =========================
 # USER HELPER
 # =========================
