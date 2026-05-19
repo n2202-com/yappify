@@ -720,6 +720,9 @@ async def start_call(channel, user, status_message=None):
     active_calls[cid] = partner
     active_calls[partner] = cid
 
+    bot.loop.create_task(typing_loop(channel.id, partner_id))
+    bot.loop.create_task(typing_loop(partner_id, channel.id))
+
     try:
         # 🔥 EDIT original "Searching..." message
         if status_message:
@@ -1216,32 +1219,21 @@ async def on_reaction_remove(reaction, user):
 # TYPING INDICATOR
 # =========================
 
-@bot.event
-async def on_typing(channel, user, when):
-    cid = channel.id
+async def typing_loop(channel_id, partner_id):
+    while True:
+        if channel_id not in active_calls:
+            return
 
-    # only work inside active calls
-    if cid not in active_calls:
-        return
+        partner_channel = bot.get_channel(partner_id)
+        if not partner_channel:
+            return
 
-    partner_id = active_calls.get(cid)
-    partner_channel = bot.get_channel(partner_id)
+        try:
+            await partner_channel.trigger_typing()
+        except:
+            pass
 
-    if not partner_channel:
-        return
-
-    # update last typing time
-    typing_tracker[cid] = time.time()
-
-    partner_id = active_calls.get(cid)
-    if partner_id:
-        typing_tracker[partner_id] = time.time()
-
-    try:
-        await partner_channel.trigger_typing()
-    except:
-        pass
-
+        await asyncio.sleep(5)  # keep alive interval
 # =========================
 # USER HELPER
 # =========================
