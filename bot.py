@@ -79,7 +79,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 intents.reactions = True
-intents.typing = true 
+intents.typing = True 
 
 bot = commands.Bot(command_prefix=["y.", "Y."], intents=intents)
 
