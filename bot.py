@@ -2550,6 +2550,13 @@ intents.reactions = True
 
 bot = commands.Bot(command_prefix=["y.", "Y."], intents=intents)
 
+import asyncio
+
+async def setup_hook():
+    bot.typing_task = asyncio.create_task(typing_cleanup_loop())
+
+bot.setup_hook = setup_hook
+
 # =========================
 # STATE
 # =========================
@@ -4870,11 +4877,6 @@ async def unban_server_slash(interaction: discord.Interaction, guild_id: str, re
     )
 
     await interaction.response.send_message("✅ Unbanned." if success else "❌ Server not banned.")
-
-# =========================
-# START BACKGROUND TASKS
-# =========================
-bot.loop.create_task(typing_cleanup_loop())
 
 # =========================
 # RUN
