@@ -93,6 +93,7 @@ webhook_cache = {}
 webhook_locks = {}   
 search_messages = {}  # channel_id -> message
 
+typing_links = {}  # channel_id → {"target_channel": id, "last_typing": time.time()}
 message_links = {}
 reaction_lock = set()
 last_activity = {}
@@ -866,6 +867,53 @@ async def memory_cleanup_loop():
     cleanup_expired_memory()
 
 # =========================
+# TYPING EVENT
+# =========================
+
+@bot.event
+async def on_typing(channel, user, when):
+    if user.bot:
+        return
+
+    data = message_links.get(channel.id)
+    if not data:
+        return
+
+    target_channel = bot.get_channel(data["channel"])
+    if not target_channel:
+        return
+
+    # mark typing
+    typing_links[channel.id] = {
+        "target_channel": data["channel"],
+        "last_typing": time.time()
+    }
+
+    # trigger typing in target server
+    async with target_channel.typing():
+        pass
+# =========================
+# TYPING LOOP
+# =========================
+
+async def typing_cleanup_loop():
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+        now = time.time()
+
+        to_remove = []
+
+        for cid, data in typing_links.items():
+            if now - data["last_typing"] > 5:  # 5s timeout
+                to_remove.append(cid)
+
+        for cid in to_remove:
+            typing_links.pop(cid, None)
+
+        await asyncio.sleep(2)
+
+# =========================
 # READY
 # =========================
 
@@ -1136,7 +1184,7 @@ async def on_message(message):
 
 @bot.event
 async def on_reaction_add(reaction, user):
-    if user.bot:
+    if user is None or user.bot:
         return
 
     data = message_links.get(reaction.message.id)
@@ -1149,7 +1197,13 @@ async def on_reaction_add(reaction, user):
             return
 
         target_message = await target_channel.fetch_message(data["message"])
+
+        emoji = reaction.emoji
+        if isinstance(emoji, discord.PartialEmoji):
+            emoji = str(emoji)
+
         await target_message.add_reaction(reaction.emoji)
+
     except Exception as e:
         print(f"[REACTION ADD ERROR]: {e}")
 
@@ -1159,7 +1213,10 @@ async def on_reaction_add(reaction, user):
 
 @bot.event
 async def on_reaction_remove(reaction, user):
-    if user.bot:
+    if user is None or user.bot:
+        return
+
+    if reaction.message is None:
         return
 
     data = message_links.get(reaction.message.id)
@@ -1172,7 +1229,13 @@ async def on_reaction_remove(reaction, user):
             return
 
         target_message = await target_channel.fetch_message(data["message"])
+        
+        emoji = reaction.emoji
+        if isinstance(emoji, discord.PartialEmoji):
+            emoji = str(emoji)
+
         await target_message.remove_reaction(reaction.emoji, user)
+
     except Exception as e:
         print(f"[REACTION REMOVE ERROR]: {e}")
 
@@ -4805,6 +4868,11 @@ async def unban_server_slash(interaction: discord.Interaction, guild_id: str, re
     )
 
     await interaction.response.send_message("✅ Unbanned." if success else "❌ Server not banned.")
+
+# =========================
+# START BACKGROUND TASKS
+# =========================
+bot.loop.create_task(typing_cleanup_loop())
 
 # =========================
 # RUN
