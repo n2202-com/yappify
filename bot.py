@@ -10,7 +10,7 @@ import datetime
 import json
 import os
 import asyncio
-
+# typing check
 # =========================
 # CONFIG
 # =========================
