@@ -3604,46 +3604,48 @@ async def on_message(message):
 # =========================
 
 @bot.event
-async def on_reaction_add(reaction, user):
-    if user.bot:
+async def on_raw_reaction_add(payload):
+    if payload.user_id == bot.user.id:
         return
 
-    data = message_links.get(reaction.message.id)
+    data = message_links.get(payload.message_id)
     if not data:
         return
 
     try:
-        target_channel = bot.get_channel(data["channel"])
-        if not target_channel:
+        channel = bot.get_channel(data["channel"])
+        if not channel:
             return
 
-        target_message = await target_channel.fetch_message(data["message"])
-        await target_message.add_reaction(reaction.emoji)
+        message = await channel.fetch_message(data["message"])
+        await message.add_reaction(payload.emoji)
+
     except Exception as e:
-        print(f"[REACTION ADD ERROR]: {e}")
+        print(f"[RAW REACTION ADD ERROR]: {e}")
 
 # =========================
 # REACTION REMOVE
 # =========================
 
 @bot.event
-async def on_reaction_remove(reaction, user):
-    if user.bot:
+async def on_raw_reaction_remove(payload):
+    if payload.user_id == bot.user.id:
         return
 
-    data = message_links.get(reaction.message.id)
+    data = message_links.get(payload.message_id)
     if not data:
         return
 
     try:
-        target_channel = bot.get_channel(data["channel"])
-        if not target_channel:
+        channel = bot.get_channel(data["channel"])
+        if not channel:
             return
 
-        target_message = await target_channel.fetch_message(data["message"])
-        await target_message.remove_reaction(reaction.emoji, user)
+        message = await channel.fetch_message(data["message"])
+        await message.remove_reaction(payload.emoji, bot.get_user(payload.user_id))
+
     except Exception as e:
-        print(f"[REACTION REMOVE ERROR]: {e}")
+        print(f"[RAW REACTION REMOVE ERROR]: {e}")
 
 # =========================
 # USER HELPER
