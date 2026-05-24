@@ -208,7 +208,7 @@ async def get_or_create_webhook(channel):
 
     # 1. try find existing webhook
     for w in hooks:
-        if w.name == "Nash":
+        if w.name == "Yappify":
             return w
 
     # 2. safety: avoid hitting webhook limit blindly
@@ -216,7 +216,7 @@ async def get_or_create_webhook(channel):
         return hooks[0]  # fallback instead of creating new one
 
     # 3. create only if missing
-    return await channel.create_webhook(name="Nash")
+    return await channel.create_webhook(name="Yappify")
 
 # =========================
 # CLEANUP
@@ -938,7 +938,7 @@ async def on_guild_join(guild: discord.Guild):
             inline=False
         )
 
-        embed.set_footer(text="Nash Bot Setup Check")
+        embed.set_footer(text="Yappify Setup Check")
 
         channel = guild.system_channel
 
@@ -962,7 +962,7 @@ async def on_message(message):
     cid = message.channel.id
 
     # =========================
-    # Ignore specific Nash commands so they are not relayed
+    # Ignore specific Yappify commands so they are not relayed
     # =========================
     ignore_commands = [
         "y.s", "y.skip", "y.S", 
@@ -1566,9 +1566,9 @@ async def friend_request_action(channel_id, user=None, interaction=None):
     webhook = webhook_cache.get(partner_id)
     if webhook is None:
         hooks = await target_channel.webhooks()
-        webhook = next((w for w in hooks if w.name == "Nash"), None)
+        webhook = next((w for w in hooks if w.name == "Yappify"), None)
         if webhook is None:
-            webhook = await target_channel.create_webhook(name="Nash")
+            webhook = await target_channel.create_webhook(name="Yappify")
         webhook_cache[partner_id] = webhook
 
     actor = get_user(user or interaction)
