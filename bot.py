@@ -1157,7 +1157,7 @@ async def on_message(message):
     # =========================
     try:
         sent = await webhook.send(
-            content=message.content,
+            content=content,
             username=message.author.display_name,
             avatar_url=message.author.display_avatar.url,
             files=files,
@@ -1167,13 +1167,21 @@ async def on_message(message):
 
     except discord.Forbidden:
         await message.channel.send(
-           "🚫 I don't have webhook permissions in this server. Please enable **Manage Webhooks** and **Send Messages**."
+            "🚫 I cannot send messages to the other server because webhook permissions are disabled there.\n"
+            "Please enable **Manage Webhooks + Send Messages**."
         )
         return
 
-    except discord.HTTPException as e:
+    except discord.HTTPException:
         await message.channel.send(
-            "🚫 Webhook failed. This usually means missing permissions or the webhook was deleted. Please re-enable permissions."
+            "🚫 Webhook failed in the other server (likely deleted or permissions removed)."
+        )
+        return
+
+    # 🔥 IMPORTANT CHECK: webhook returned but still failed silently
+    if not sent:
+        await message.channel.send(
+            "🚫 Message could not be delivered to the other server. Webhook is not working."
         )
         return
 
