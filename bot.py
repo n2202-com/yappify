@@ -1011,7 +1011,7 @@ async def on_message(message):
                 webhook = None
 
         if not target.permissions_for(target.guild.me).manage_webhooks:
-            return await channel.send("🚫 Missing Manage Webhooks permission in target server.")
+            return await message.channel.send("🚫 Missing Manage Webhooks permission in this server.")
 
         # 2. rebuild if missing/invalid
         if webhook is None:
