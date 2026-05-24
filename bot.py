@@ -993,6 +993,19 @@ async def on_message(message):
     last_activity[cid] = time.time()
     log_call_message(message)
 
+    # =========================
+    # SOURCE PERMISSION CHECK (FIXED)
+    # =========================
+
+    source_channel = message.channel
+
+    if not source_channel.permissions_for(source_channel.guild.me).manage_webhooks:
+        await source_channel.send(
+            "🚫 Missing **Manage Webhooks** permission in this server.\n"
+            "Enable it to use cross-server calls."
+        )
+        return
+
 
     # =========================
     # WEBHOOK SAFE FETCH (NO DUPES)
@@ -1009,9 +1022,6 @@ async def on_message(message):
                 await webhook.fetch()
             except:
                 webhook = None
-
-        if not target.permissions_for(target.guild.me).manage_webhooks:
-            return await message.channel.send("🚫 Missing Manage Webhooks permission in this server.")
 
         # 2. rebuild if missing/invalid
         if webhook is None:
