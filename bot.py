@@ -1156,34 +1156,30 @@ async def on_message(message):
     # NORMAL MESSAGE RELAY
     # =========================
     try:
-        sent = await webhook.send(
-            content=content,
-            username=message.author.display_name,
-            avatar_url=message.author.display_avatar.url,
-            files=files,
-            wait=True,
-            allowed_mentions=discord.AllowedMentions.none()
-        )
+    sent = await webhook.send(
+        content=content,
+        username=message.author.display_name,
+        avatar_url=message.author.display_avatar.url,
+        files=files,
+        wait=True,
+        allowed_mentions=discord.AllowedMentions.none()
+    )
 
-    except discord.Forbidden:
-        await message.channel.send(
-            "🚫 I cannot send messages to the other server because webhook permissions are disabled there.\n"
+except discord.Forbidden:
+    # ❌ webhook broken → switch to fallback mode
+
+    target_channel = bot.get_channel(target_id)
+
+    if target_channel:
+        await target_channel.send(
+            "🚫 I can't send messages because webhook permissions are disabled in this server.\n"
             "Please enable **Manage Webhooks + Send Messages**."
         )
-        return
 
-    except discord.HTTPException:
-        await message.channel.send(
-            "🚫 Webhook failed in the other server (likely deleted or permissions removed)."
-        )
-        return
-
-    # 🔥 IMPORTANT CHECK: webhook returned but still failed silently
-    if not sent:
-        await message.channel.send(
-            "🚫 Message could not be delivered to the other server. Webhook is not working."
-        )
-        return
+    await message.channel.send(
+        f"🚫 Call broken: webhook disabled in **{target.guild.name}**."
+    )
+    return
 
     # =========================
     # MESSAGE LINK TRACKING (FIXED)
