@@ -1155,14 +1155,27 @@ async def on_message(message):
     # =========================
     # NORMAL MESSAGE RELAY
     # =========================
-    sent = await webhook.send(
-        content=content,
-        username=message.author.display_name,
-        avatar_url=message.author.display_avatar.url,
-        files=files,
-        wait=True,
-        allowed_mentions=discord.AllowedMentions.none()
-    )
+    try:
+        sent = await webhook.send(
+            content=message.content,
+            username=message.author.display_name,
+            avatar_url=message.author.display_avatar.url,
+            files=files,
+            wait=True,
+            allowed_mentions=discord.AllowedMentions.none()
+        )
+
+    except discord.Forbidden:
+        await message.channel.send(
+           "🚫 I don't have webhook permissions in this server. Please enable **Manage Webhooks** and **Send Messages**."
+        )
+        return
+
+    except discord.HTTPException as e:
+        await message.channel.send(
+            "🚫 Webhook failed. This usually means missing permissions or the webhook was deleted. Please re-enable permissions."
+        )
+        return
 
     # =========================
     # MESSAGE LINK TRACKING (FIXED)
